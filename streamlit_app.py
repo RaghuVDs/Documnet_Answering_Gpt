@@ -7,6 +7,6 @@ pages = [
     st.Page(lab2, title="Lab 2")
 ]
 
-pg = st.navigation(pages, position="sidebar")
+pg = st.navigation(pages)
 
 pg.run()
