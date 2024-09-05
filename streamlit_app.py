@@ -1,13 +1,17 @@
+AI APP  - HW1
+
+Deep Chandreshbhai Patoliya
+​
+Raghuveera Narasimha
+​
 import streamlit as st
+from lab1 import lab1
+from lab2 import lab2
 
-# Define the pages using the new Streamlit navigation feature
-pages = {
-    "Lab 1": st.Page("lab1.py", title="Lab 1"),
-    "Lab 2": st.Page("lab2.py", title="Lab 2")
-}
+pg = st.navigation([
+    st.Page(lab2, title = "Lab 2"),
+    st.Page(lab1, title = "Lab 1")
+], position = "sidebar")
 
-# Pass the 'pages' dictionary to st.navigation
-current_page = st.navigation(pages)
 
-# Run the selected page
-current_page.run() 
+pg.run()
