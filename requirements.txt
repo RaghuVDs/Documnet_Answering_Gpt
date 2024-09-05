@@ -1,2 +1,2 @@
-streamlit --version
+streamlit
 openai
