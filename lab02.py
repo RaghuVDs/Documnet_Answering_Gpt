@@ -53,7 +53,7 @@ def lab2():
                 else:  # 5 bullet points
                     prompt = f"Summarize the following document in 5 bullet points:\n\n{document}"
 
-                # Generate summary
+                # Generates summary
                 with st.spinner("Generating summary..."):
                     response = client.chat.completions.create(
                         model=model_name,
