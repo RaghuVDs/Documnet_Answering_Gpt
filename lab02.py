@@ -17,53 +17,54 @@ def lab2():
             unsafe_allow_html=True,
         )
 
+        # API key handling
         openai_api_key = st.secrets["api_key"]
-
         if not openai_api_key:
-            st.error("OpenAI API key not found in secrets. Please add it to your secrets file.")
+            st.error("OpenAI API key not found in secrets.")
             st.stop()
 
         try:
             client = OpenAI(api_key=openai_api_key)
-            models = client.models.list()  
 
-            # API key is valid, proceed to the next step
-            # Columns for better layout
-            col1, col2 = st.columns([3, 1])
-
-            # File uploader in the first column
-            with col1:
-                uploaded_file = st.file_uploader(
-                    "Upload a Document (.txt or .md)", type=("txt", "md")
+            # Sidebar with summary options and model choice
+            with st.sidebar:
+                st.subheader("Summary Options")
+                summary_option = st.radio(
+                    "Choose summary type:",
+                    ("100 words", "2 paragraphs", "5 bullet points")
                 )
+                use_advanced_model = st.checkbox("Use Advanced Model (gpt-4o)")
+                model_name = "gpt-4o" if use_advanced_model else "gpt-4o-mini"
 
-            # Question input and button in the second column
-            with col2:
-                question = st.text_area(
-                    "Ask a Question",
-                    placeholder="Can you give me a short summary?",
-                    height=150,  # Adjust height as needed
-                    disabled=not uploaded_file,
-                )
-                if st.button("Get Answer", disabled=not (uploaded_file and question)):
-                    # Process the file and question
-                    document = uploaded_file.read().decode()
-                    messages = [
-                        {
-                            "role": "user",
-                            "content": f"Here's a document: {document} \n\n---\n\n {question}",
-                        }
-                    ]
+            # File uploader
+            uploaded_file = st.file_uploader(
+                "Upload a Document (.txt or .md)", type=("txt", "md")
+            )
 
-                    # Generating the answers 
-                    with st.spinner("Generating answer..."):
-                        response = client.chat.completions.create(
-                            model="gpt-4-1106-preview",  # or any other suitable model
-                            messages=messages
-                        )
+            if uploaded_file and st.button("Generate Summary"):
+                # Process the file
+                document = uploaded_file.read().decode()
 
-                    # Displaying the answer
-                    st.write(response.choices[0].message.content) 
+                # Construct prompt based on selected summary option
+                if summary_option == "100 words":
+                    prompt = f"Summarize the following document in 100 words:\n\n{document}"
+                elif summary_option == "2 paragraphs":
+                    prompt = f"Summarize the following document in 2 connecting paragraphs:\n\n{document}"
+                else:  # 5 bullet points
+                    prompt = f"Summarize the following document in 5 bullet points:\n\n{document}"
+
+                # Generate summary
+                with st.spinner("Generating summary..."):
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
+
+                # Displays the summary
+                st.subheader("Summary")
+                st.write(response.choices[0].message.content)
 
         except AuthenticationError:
             st.error("Invalid OpenAI API key. Please check your key and try again.")
