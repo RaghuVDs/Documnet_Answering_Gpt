@@ -38,7 +38,7 @@ def lab2():
 
             # File uploader
             uploaded_file = st.file_uploader(
-                "Upload a Document (.txt or .md)", type=("txt", "md")
+                "Upload a Document (.txt or .md  or .pdf)", type=("txt", "md","pdf")
             )
 
             if uploaded_file and st.button("Generate Summary"):
