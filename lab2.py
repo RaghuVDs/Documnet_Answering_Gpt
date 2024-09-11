@@ -19,15 +19,20 @@ def lab2():
         )
         
         
-        openai_api_key = st.text_input("OpenAI API Key", type="password", help="Enter your OpenAI API key here")
-        
-        
-        if not openai_api_key:
-            st.warning("Please add your OpenAI API key to continue.")
-        else:
-            # created an OpenAI client to check if the key is valid
-            try:
-                client = OpenAI(api_key=openai_api_key)
+                        # Retrieve OpenAI API key from secrets
+                    openai_api_key = st.secrets["OPENAI_API_KEY"]
+                
+                    # Check if API key is available in secrets
+                    if not openai_api_key:
+                        st.error("OpenAI API key not found in secrets. Please add it to your secrets file.")
+                        st.stop()
+                
+                    try:
+                        client = OpenAI(api_key=openai_api_key)
+                        models = client.models.list()  
+                    except OpenAIError as e:
+                        st.error(f"Error validating API key: {e}")
+                        st.stop() 
         
                 # Columns for better layout
                 col1, col2 = st.columns([3, 1])
