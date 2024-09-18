@@ -1,17 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 from openai import AuthenticationError
-import PyPDF2
-
-# Function to read PDF files
-def read_pdf(uploaded_file):
-    pdf_reader = PyPDF2.PdfReader(uploaded_file)
-    num_pages = len(pdf_reader.pages)
-    text = ""
-    for page_num in range(num_pages):
-        page = pdf_reader.pages[page_num]
-        text += page.extract_text()
-    return text
+from tiktoken import encoding_for_model
 
 def lab3():
     # Initialize chat history if not present in session state
@@ -19,114 +9,122 @@ def lab3():
         st.session_state.messages = []
 
     # Title and description
-    st.markdown(
-        "<h1 style='text-align: center;'>📄 Document Question Answering</h1>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<p style='text-align: center;'>Upload a document and ask questions about it – GPT will answer!</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<p style='text-align: center;'>To use this app, you need to provide an OpenAI API key, which you can get <a href='https://platform.openai.com/account/api-keys'>here</a>.</p>",
-        unsafe_allow_html=True,
-    )
+    st.title("🤖 Chat with GPT")
+    st.markdown("Ask me anything!")
 
-    # API key handling
+    # API key handling with a more helpful error message
     openai_api_key = st.secrets["api_key"]
     if not openai_api_key:
-        st.error("OpenAI API key not found in secrets.")
+        st.error(
+            "OpenAI API key not found in secrets. "
+            "Make sure you've added it to your Streamlit secrets file."
+        )
         st.stop()
 
     try:
         client = OpenAI(api_key=openai_api_key)
 
-        # Sidebar with summary options and model choice
+        # Sidebar with model choice
         with st.sidebar:
-            st.subheader("Summary Options")
-            summary_option = st.radio(
-                "Choose summary type:",
-                ("100 words", "2 paragraphs", "5 bullet points")
-            )
-            use_advanced_model = st.checkbox("Use Advanced Model (gpt-4o)")
-            model_name = "gpt-4o" if use_advanced_model else "gpt-4o-mini"
+            st.subheader("Model Options")
+            use_advanced_model = st.checkbox("Use Advanced Model (gpt-4)")
+            model_name = "gpt-4" if use_advanced_model else "gpt-3.5-turbo"
 
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Upload a Document (.txt, .md, or .pdf)", type=("txt", "md", "pdf")
-        )
+            # Initialize encoding after model_name is assigned
+            encoding = encoding_for_model(model_name)
 
         # Display chat messages from history
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # User input for questions or document upload
+        # User input for questions
         if prompt := st.chat_input("You:"):
-            # If a document is not uploaded yet and the user types something,
-            # assume it's a question about the app itself
-            if 'document' not in st.session_state:
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
-                response = client.chat.completions.create(
+            # Calculate token count for the new prompt
+            new_prompt_tokens = len(encoding.encode(prompt))
+
+            # Maintain a conversation buffer, limiting it to 'max_tokens'
+            max_tokens = 3000  # Adjust this as needed
+            conversation_buffer = []
+            total_tokens = 0
+            for message in reversed(st.session_state.messages):
+                message_tokens = len(encoding.encode(message["content"]))
+                if total_tokens + message_tokens > max_tokens:
+                    break
+                conversation_buffer.insert(0, message)
+                total_tokens += message_tokens
+
+            # Add system message tokens
+            total_tokens += len(encoding.encode("You are a helpful AI assistant."))
+
+            # Display token count information
+            st.write(f"Total tokens used for this request: {total_tokens}")
+            if total_tokens > max_tokens:
+                st.warning(f"Conversation buffer truncated to fit within {max_tokens} tokens.")
+
+            # Construct the full message history for context
+            messages_for_request = [
+                {"role": "system", "content": "You are a helpful AI assistant."}
+            ] + conversation_buffer
+
+            # Stream the response
+            response_container = st.empty()
+            full_response = ""
+            for chunk in client.chat.completions.create(
+                model=model_name,
+                messages=messages_for_request,
+                stream=True
+            ):
+                content = chunk.choices[0].delta.content or ""
+                full_response += content
+                response_container.markdown(full_response + "▌")
+            response_container.markdown(full_response)
+
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+            # Ask if the user wants more information
+            st.markdown("**Do you want more information?**")
+            col1, col2 = st.columns(2)
+
+            # Callback function to handle "Yes" button click
+            def on_yes_click():
+                st.session_state.messages.append({"role": "user", "content": "Can you give more information on that?"})
+
+                # Trigger another API call to get the elaboration
+                conversation_buffer = st.session_state.messages[-4:]
+                messages_for_request = [
+                    {"role": "system", "content": "You are a helpful AI assistant."}
+                ] + conversation_buffer
+
+                # Stream the elaboration
+                response_container = st.empty()
+                full_response = ""
+                for chunk in client.chat.completions.create(
                     model=model_name,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful AI assistant for a document Q&A app."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message.content})
-                with st.chat_message("assistant"):
-                    st.markdown(response.choices[0].message.content)
-            else:  # Document is uploaded, process the question
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+                    messages=messages_for_request,
+                    stream=True
+                ):
+                    content = chunk.choices[0].delta.content or ""
+                    full_response += content
+                    response_container.markdown(full_response + "▌")
+                response_container.markdown(full_response)
 
-                # Construct the prompt for the LLM, including only the last two messages
-                context_messages = st.session_state.messages[-3:]  # Include the previous assistant's response for context
-                messages = [
-                    {"role": "system", "content": f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {st.session_state['document']}"}
-                ] + context_messages 
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-                # Generate the answer with streaming
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-                    for response in client.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        stream=True  # Enable streaming
-                    ):
-                        full_response += response.choices[0].delta.get("content", "")
-                        message_placeholder.markdown(full_response)  # Update the placeholder with the accumulated response
-                    message_placeholder.markdown(full_response)  # Finalize the response 
+            with col1:
+                st.button("Yes", on_click=on_yes_click)
 
-                # Keep only the last two messages in the history
-                st.session_state.messages = st.session_state.messages[-2:]
-
-        elif uploaded_file and st.button("Process Document"):  # Handle document upload
-            try:
-                # Process the file
-                if uploaded_file.type == "application/pdf":
-                    document = read_pdf(uploaded_file)
-                else:
-                    document = uploaded_file.read().decode("utf-8")
-
-                st.session_state['document'] = document
-                st.success("File processed successfully! You can now ask questions about it.")
-
-            except UnicodeDecodeError:
-                try:
-                    document = uploaded_file.read().decode("latin-1")
-                    st.session_state['document'] = document
-                    st.success("File processed successfully! You can now ask questions about it.")
-                except UnicodeDecodeError:
-                    st.error("Error decoding file. Please ensure the file is in UTF-8 or Latin-1 encoding.")
-            except Exception as e:
-                st.exception(e)
+            with col2:
+                if st.button("No"):
+                    st.session_state.messages = []
+                    st.session_state.messages.append({"role": "assistant", "content": "What question can I help you with?"})
 
     except AuthenticationError:
-        st.error("Invalid OpenAI API key. Please check your key and try again.")
+        st.error(
+            "Invalid OpenAI API key. "
+            "Please double-check your key and ensure it's correct."
+        )
