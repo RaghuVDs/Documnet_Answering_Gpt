@@ -30,7 +30,7 @@ def lab3():
         with st.sidebar:
             st.subheader("Model Options")
             use_advanced_model = st.checkbox("Use Advanced Model (gpt-4)")
-            model_name = "gpt-4o" if use_advanced_model else "gpt-4o-mini"
+            model_name = "gpt-4" if use_advanced_model else "gpt-3.5-turbo"
 
             # Initialize encoding after model_name is assigned
             encoding = encoding_for_model(model_name)
@@ -91,11 +91,19 @@ def lab3():
         # Flag to control whether to ask for more information
         ask_for_more_information = True
 
-        # Callback function to handle "Yes" button click (Defined outside the loop)
+        # Callback function to handle "Yes" button click 
         def on_yes_click():
-            nonlocal ask_for_more_information  # Access the outer variable
+            nonlocal ask_for_more_information 
             st.session_state.messages.append({"role": "user", "content": "Can you give more information on that?"})
-            ask_for_more_information = True  # Set the flag to True to trigger another API call
+            ask_for_more_information = True 
+
+        # Callback function to handle "No" button click 
+        def on_no_click():
+            nonlocal ask_for_more_information
+            st.session_state.messages = []  # Clear the chat history
+            st.session_state.messages.append({"role": "assistant", "content": "What question can I help you with?"})
+            st.session_state['reset_chat'] = True  # Set a flag to trigger a reset
+            ask_for_more_information = False  # Exit the loop
 
         while ask_for_more_information:
 
@@ -132,13 +140,15 @@ def lab3():
                 st.button("Yes", on_click=on_yes_click, key=yes_button_key) 
 
             with col2:
-                if st.button("No", key=no_button_key):
-                    st.session_state.messages = []
-                    st.session_state.messages.append({"role": "assistant", "content": "What question can I help you with?"})
-                    st.experimental_rerun() 
+                if st.button("No", on_click=on_no_click, key=no_button_key):
+                    pass  # No need for additional logic here
 
-                    break  # Exit the loop when "No" is clicked
-            
+            # Conditional rendering based on the reset flag
+            if st.session_state.get('reset_chat', False):
+                st.session_state['reset_chat'] = False  # Reset the flag
+                # If available in your Streamlit version, uncomment the next line for smoother refresh
+                # st.experimental_rerun()  
+
             ask_for_more_information = False  # Reset the flag at the end of the loop
 
     except AuthenticationError:
@@ -146,3 +156,7 @@ def lab3():
             "Invalid OpenAI API key. "
             "Please double-check your key and ensure it's correct."
         )
+
+# If you're running this script directly, you might need this line
+if __name__ == "__main__":
+    lab3()
