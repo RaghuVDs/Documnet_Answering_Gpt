@@ -100,9 +100,7 @@ def lab3():
         # Callback function to handle "No" button click 
         def on_no_click():
             nonlocal ask_for_more_information
-            st.session_state.messages = []  # Clear the chat history
             st.session_state.messages.append({"role": "assistant", "content": "What question can I help you with?"})
-            st.session_state['reset_chat'] = True  # Set a flag to trigger a reset
             ask_for_more_information = False  # Exit the loop
 
         while ask_for_more_information:
@@ -142,12 +140,6 @@ def lab3():
             with col2:
                 if st.button("No", on_click=on_no_click, key=no_button_key):
                     pass  # No need for additional logic here
-
-            # Conditional rendering based on the reset flag
-            if st.session_state.get('reset_chat', False):
-                st.session_state['reset_chat'] = False  # Reset the flag
-                # If available in your Streamlit version, uncomment the next line for smoother refresh
-                # st.experimental_rerun()  
 
             ask_for_more_information = False  # Reset the flag at the end of the loop
 
