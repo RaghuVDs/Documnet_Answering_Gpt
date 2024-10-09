@@ -5,4 +5,4 @@ pypdf2
 tiktoken
 uuid
 requests
-pysqlite3
+pysqlite3-binary
