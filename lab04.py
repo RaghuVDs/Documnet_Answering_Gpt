@@ -3,6 +3,9 @@ from openai import OpenAI
 from openai import AuthenticationError
 from tiktoken import encoding_for_model
 import uuid
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb
 from chromadb.config import Settings
 import PyPDF2
