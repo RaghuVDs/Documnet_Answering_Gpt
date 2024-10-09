@@ -1,8 +1,8 @@
 streamlit
+pip
 openai
 pypdf2
 tiktoken
 uuid
 requests
 pysqlite3
-sqlite3
