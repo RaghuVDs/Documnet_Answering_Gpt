@@ -1,9 +1,7 @@
 import streamlit as st
 import requests
 import openai
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 
 def lab5():
         def get_current_weather(location):
