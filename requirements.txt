@@ -3,3 +3,4 @@ openai
 pypdf2
 tiktoken
 uuid
+requests
