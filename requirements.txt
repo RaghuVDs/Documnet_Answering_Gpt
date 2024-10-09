@@ -5,6 +5,6 @@ pypdf2
 tiktoken
 uuid
 requests
-protobuf
+protobuf == 3.20
 chromadb
 pysqlite3-binary

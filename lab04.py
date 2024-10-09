@@ -17,7 +17,7 @@ def create_vector_db():
     Creates the ChromaDB collection if it doesn't exist in session state.
     """
     if "Lab4_vectorDB" not in st.session_state:
-        folder_path = "C:\\Users\\raghu\\OneDrive\\Desktop\\pdffolder"  # Replace with your actual path
+        folder_path = "Data/"  # Replace with your actual path
 
         if not os.path.exists(folder_path):
             st.error(f"Error: Folder '{folder_path}' not found. Please check the path and try again.")
