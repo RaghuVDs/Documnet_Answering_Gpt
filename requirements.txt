@@ -5,3 +5,4 @@ tiktoken
 uuid
 requests
 pysqlite3
+sqlite3
