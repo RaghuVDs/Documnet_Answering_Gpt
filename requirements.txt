@@ -5,4 +5,5 @@ pypdf2
 tiktoken
 uuid
 requests
+chromadb
 pysqlite3-binary
